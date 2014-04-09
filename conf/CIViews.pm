@@ -8,7 +8,7 @@ my %Conf = %$conf_ref;
 
 my $default_view = "instances";
 
-# To add a new View the following sections need to be modified
+# To add a new View the following sections need to be updated
 # 1. View Names
 # 2. View Colums 
 # 3. SQL Statements or External Sources
@@ -43,7 +43,7 @@ sub View {
  
    ######################################################################################
    ######################################################################################
-   # View colums Section
+   # View columns Section
    ######################################################################################
 
    my %Instances = ();
