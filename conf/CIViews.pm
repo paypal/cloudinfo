@@ -70,9 +70,9 @@ sub View {
    $Tenants{vcpus}           = { colname => 'Cores Used', align => 'right', sort_type => 'num', order => 6 };
    $Tenants{cores_limit}     = { colname => 'Cores Limit', align => 'right', sort_type => 'num', order => 7 };
    $Tenants{root_gb}         = { colname => 'Disk Used (GB)', align => 'right', sort_type => 'num', order => 8 };
-   $Tenants{ram_hours}       = { colname => 'RAM MB-Hours', align => 'right', sort_type => 'num', order => 9 };
-   $Tenants{cpu_hours}       = { colname => 'CPU Hours', align => 'right', sort_type => 'num', order => 10 };
-   $Tenants{disk_hours}      = { colname => 'Disk GB-Hours', align => 'right', sort_type => 'num', order => 11 };
+   #$Tenants{ram_hours}       = { colname => 'RAM MB-Hours', align => 'right', sort_type => 'num', order => 9 };
+   #$Tenants{cpu_hours}       = { colname => 'CPU Hours', align => 'right', sort_type => 'num', order => 10 };
+   #$Tenants{disk_hours}      = { colname => 'Disk GB-Hours', align => 'right', sort_type => 'num', order => 11 };
    
    my %Computes = ();
    $Computes{hypervisor_hostname}  = { colname => 'Hypervisor', align => 'left', sort_type => 'alpha', default_sort => 'asc', order => 1 };
@@ -273,7 +273,7 @@ sub sql_stmt {
 
    $SQL{instances} = "select i.hostname, i.uuid, i.host, t.name, i.memory_mb, i.vcpus, i.root_gb, flip.floating_ip_address, ipall.ip_address, g.name, i.vm_state, i.task_state, i.created_at FROM $Conf{NOVA_DB}.instances i LEFT JOIN $Conf{QUANTUM_DB}.ports p on p.device_id = i.uuid LEFT JOIN $Conf{QUANTUM_DB}.floatingips flip on flip.fixed_port_id = p.id LEFT JOIN $Conf{QUANTUM_DB}.ipallocations ipall on ipall.port_id = p.id LEFT JOIN $Conf{KEYSTONE_DB}.project t on i.project_id = t.id LEFT JOIN $Conf{GLANCE_DB}.images g on g.id = i.image_ref where i.deleted = 0";
 
-   $SQL{tenants} = qq[select t.name, count(i.id), IFNULL((select max(case when nq.resource = 'instances' then nq.hard_limit end ) Instances from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{instances_default_limit}'), sum(i.memory_mb), IFNULL((select  max(case when nq.resource = 'ram' then nq.hard_limit end ) RAM from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{ram_default_limit}'), sum(i.vcpus), IFNULL((select max(case when nq.resource = 'cores' then nq.hard_limit end ) CORES from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{cores_default_limit}'), sum(i.root_gb), tu.ram_hours,tu.cpu_hours,tu.disk_hours from $Conf{KEYSTONE_DB}.project t left JOIN $Conf{NOVA_DB}.instances i on  t.id = i.project_id left JOIN $Conf{CLOUDINFO_DB}.tenant_usage tu on tu.tenant_id = t.id where i.deleted =0 $where_item group by t.name];
+   $SQL{tenants} = qq[select t.name, count(i.id), IFNULL((select max(case when nq.resource = 'instances' then nq.hard_limit end ) Instances from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{instances_default_limit}'), sum(i.memory_mb), IFNULL((select  max(case when nq.resource = 'ram' then nq.hard_limit end ) RAM from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{ram_default_limit}'), sum(i.vcpus), IFNULL((select max(case when nq.resource = 'cores' then nq.hard_limit end ) CORES from $Conf{NOVA_DB}.quotas nq where nq.deleted = 0 and nq.project_id = t.id),'$Conf{cores_default_limit}'), sum(i.root_gb) from $Conf{KEYSTONE_DB}.project t left JOIN $Conf{NOVA_DB}.instances i on  t.id = i.project_id where i.deleted = 0 $where_item group by t.name];
 
    $SQL{computes} = qq[select SUBSTRING_INDEX(cn.hypervisor_hostname, '.', 1), IF((s.disabled = 0 and s.`binary` = 'nova-compute'), 'enabled', 'disabled'), IFNULL((select a.name from $Conf{NOVA_DB}.aggregate_hosts ah LEFT JOIN $Conf{NOVA_DB}.aggregates a ON a.id=ah.aggregate_id where SUBSTRING_INDEX(host, '.', 1) = SUBSTRING_INDEX(hypervisor_hostname, '.', 1) and a.name not like '%fz_%' and ah.deleted=0 and a.deleted=0), 'General_Purpose'), cn.vcpus,cn.vcpus_used,cn.memory_mb,cn.memory_mb_used,cn.local_gb,cn.local_gb_used,cn.free_disk_gb,cn.disk_available_least,cn.running_vms from $Conf{NOVA_DB}.compute_nodes cn LEFT JOIN $Conf{NOVA_DB}.services s ON cn.service_id=s.id where cn.deleted = 0 $where_item];
 
