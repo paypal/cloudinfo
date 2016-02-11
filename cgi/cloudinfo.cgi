@@ -8,6 +8,7 @@ use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 use DBI;
 use lib "$FindBin::Bin/../conf";
 use CIViews;
+use JSON::XS;
 
 my $conf_file = "$FindBin::Bin/../conf/cloud.cfg";
 my $conf_ref = get_conf();
@@ -34,6 +35,7 @@ my $search_str = trim($params->{'search_str'});
 my $filter     = $params->{'filter'};
 my $item       = $params->{'item'};
 my $iframe     = $params->{'iframe'};
+my $output_option = $params->{'output'};
 
 my $param_list;
 my $tab_param;
@@ -89,6 +91,10 @@ my %ColumnNames = ();
    $tab_title = $AllViews{$tab}{viewname};
    @CurrentTab{keys %ColumnNames} = values %ColumnNames;
 
+my $dbh;
+if ($output_option eq "json") {
+    OutputJson();
+}
 
 #####################################################
 # HTML
@@ -129,7 +135,7 @@ print start_html(-title =>"$main_title",
                  -style => {-code => $css_code},
                  -script=>{-type=>'JAVASCRIPT', -code=>$js_code}
                  );
-my $dbh;
+
 if ( defined $iframe ) {
     my $graph_target = $iframe;
     print qq[<font face='Arial' size='2' color="#FFFFFF"> &nbsp; Time Period: &nbsp;</font>];
@@ -153,6 +159,41 @@ else {
 print end_html;
 
 ##############################################################
+sub OutputJson {
+    print $q->header("application/json");
+
+    my @column_names;
+    for my $key (sort { $ColumnNames{$a}{order} <=> $ColumnNames{$b}{order} } keys %ColumnNames) {
+        push @column_names, $key;
+    }
+
+    $dbh = DBI->connect("DBI:mysql:database=$Conf{NOVA_DB};host=$Conf{DB_HOST};port=$Conf{DB_PORT}", "$Conf{READONLY_USER}", "$Conf{READONLY_PASSWORD}",
+       {'RaiseError' => 1 });
+
+    my ($rows_aoa_ref, $sql_columns) = fetch_rows(\%CurrentTab);
+    $dbh->disconnect();
+    my @Rows_AOA = @$rows_aoa_ref;
+    my %Output_Hash;
+    my @rows;
+    foreach my $row_ref (@Rows_AOA) {
+        my $col_idx = 0;
+        my %Row_Hash;
+        foreach my $cell (@$row_ref) {
+            my $col_name = @column_names[$col_idx];
+            chomp $cell;
+            $Row_Hash{$col_name} = $cell;
+            $col_idx = $col_idx + 1;
+        }
+        push @rows, \%Row_Hash;
+    }
+    $Output_Hash{"results"} = \@rows;
+    my $json = encode_json \%Output_Hash;
+    print $json;
+
+    exit;
+}
+
+
 sub DisplayMain {
 # FIRST ROW
     print qq[<table width="100%" border='0' cellspacing='0' cellpadding='0'>
@@ -506,4 +547,3 @@ sub trim {
     }
     return wantarray ? @out : $out[0];
 }
-
