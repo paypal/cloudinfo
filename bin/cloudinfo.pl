@@ -5,6 +5,13 @@ use DBI;
 use Getopt::Long;
 use FindBin;
 
+# Add the following parameters in cloud.cfg
+# CLOUDINFO_HOST=<cloudinfo_db_host>
+# CLOUDINFO_PORT=<db_host_port>
+# CLOUDINFO_USER=<cloudinfo_db_user>
+# CLOUDINFO_PASSWORD=<cloudinfo_db_password>
+# CLOUDINFO_DB=<cloudinfo_db_name>
+
 
 my $conf_file = "$FindBin::Bin/../conf/cloud.cfg";
 my $conf_ref = get_conf();
